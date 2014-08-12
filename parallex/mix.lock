@@ -1,0 +1,2 @@
+%{"ecto": {:package, "0.2.1"},
+  "poolboy": {:package, "1.2.1"}}
