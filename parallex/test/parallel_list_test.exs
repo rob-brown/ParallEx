@@ -14,33 +14,33 @@ defmodule ParallelListTest do
   end
 
   test "new from list" do
-    for l <- default_test_lists, do: assert ParallelList.new(l) == %ParallelList{list: l, count: Enum.count l}
+    for l <- default_test_lists, do: assert List.Parallel.new(l) == %List.Parallel{list: l, count: Enum.count l}
   end
 
   test "map" do
     map = fn module, x -> module.map(x, &(&1 * 2)) end
     for l <- default_test_lists do
-      assert map.(Enum, l) == map.(ParallelEnum, ParallelList.new(l))
+      assert map.(Enum, l) == map.(ParallelEnum, List.Parallel.new(l))
     end
   end
 
   test "reduce" do
     sum = fn module, x -> module.reduce(x, 0, &(&1 + &2)) end
     for l <- default_test_lists do
-      assert sum.(Enum, l) == sum.(ParallelEnum, ParallelList.new(l))
+      assert sum.(Enum, l) == sum.(ParallelEnum, List.Parallel.new(l))
     end
   end
 
   # test "join" do
   #   letters = for n <- 0..100, do: rem(n, (?z - ?a)) + ?a
-  #   plist = ParallelList.new(letters)
+  #   plist = List.Parallel.new(letters)
   #   assert Enum.join(letters, " ") == Enum.join(plist, " ")
   # end
 
   test "member?" do
     test = fn l ->
              count = Enum.count l
-             plist = ParallelList.new l
+             plist = List.Parallel.new l
              assert ParallelEnum.member?(plist, Enum.at(l, 0))
              assert ParallelEnum.member?(plist, Enum.at(l, 1))
              assert ParallelEnum.member?(plist, Enum.at(l, count - 2))
@@ -50,6 +50,6 @@ defmodule ParallelListTest do
   end
 
   test "count" do
-    for l <- default_test_lists, do: assert Enum.count(l) == ParallelEnum.count(ParallelList.new l)
+    for l <- default_test_lists, do: assert Enum.count(l) == ParallelEnum.count(List.Parallel.new l)
   end
 end

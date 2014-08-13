@@ -1,14 +1,14 @@
-defmodule ParallelList.Splitter do
+defmodule List.Parallel.Splitter do
   use Splitter
 
   # ???: Is the range even necessary?
   defstruct list: [], range: 0..0
 
   def new(list \\ [])
-  def new([]), do: %ParallelList.Splitter{}
+  def new([]), do: %List.Parallel.Splitter{}
   def new(list) when is_list(list) do
     range = 0..(Enum.count(list) - 1)
-    %ParallelList.Splitter{list: list, range: range}
+    %List.Parallel.Splitter{list: list, range: range}
   end
 
   def split(splitter) do
@@ -23,8 +23,8 @@ defmodule ParallelList.Splitter do
     lo_range = lo..mid
     hi_range = (mid + 1)..hi
     [
-      %ParallelList.Splitter{list: Enum.slice(list, shift_range(lo_range, -lo)), range: lo_range},
-      %ParallelList.Splitter{list: Enum.slice(list, shift_range(hi_range, -lo)), range: hi_range},
+      %List.Parallel.Splitter{list: Enum.slice(list, shift_range(lo_range, -lo)), range: lo_range},
+      %List.Parallel.Splitter{list: Enum.slice(list, shift_range(hi_range, -lo)), range: hi_range},
     ]
   end
 
@@ -34,7 +34,7 @@ defmodule ParallelList.Splitter do
 
   defp _reduce([], _range, acc, _fun), do: { :done, acc }
   defp _reduce([ head | tail ], lo..hi, acc, fun) do
-    s = %ParallelList.Splitter{list: tail, range: (lo + 1)..hi}
+    s = %List.Parallel.Splitter{list: tail, range: (lo + 1)..hi}
     Enumerable.reduce(s, fun.(head, acc), fun)
   end
 
@@ -46,12 +46,12 @@ defmodule ParallelList.Splitter do
     { :ok, Enum.count(splitter.list) }
   end
 
-  def into(%ParallelList.Splitter{list: orig_list}) do
+  def into(%List.Parallel.Splitter{list: orig_list}) do
     { [], fn
       acc, {:cont, x} ->
         [ x | acc ]
       acc, :done ->
-        ParallelList.Splitter.new(orig_list ++ Enum.reverse(acc))
+        List.Parallel.Splitter.new(orig_list ++ Enum.reverse(acc))
       _, :halt ->
         :ok
     end}

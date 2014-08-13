@@ -1,4 +1,4 @@
-defprotocol ParallelEnumerable do
+defprotocol Enumerable.Parallel do
 
   @type acc :: {:cont, term} | {:halt, term} | {:suspend, term}
   @type reducer :: (term, term -> acc)
@@ -44,7 +44,7 @@ defmodule ParallelEnum do
   end
 
   def reduce(collection, acc, reducer, combiner, partitions) do
-    ParallelEnumerable.reduce(collection,
+    Enumerable.Parallel.reduce(collection,
                               {:cont, acc},
                               fn x, acc -> {:cont, reducer.(x, acc)} end,
                               fn x, {_, acc} -> {:cont, combiner.(x, acc)} end,
@@ -56,7 +56,7 @@ defmodule ParallelEnum do
   end
 
   def member?(collection, value) do
-    case ParallelEnumerable.member?(collection, value) do
+    case Enumerable.Parallel.member?(collection, value) do
       {:ok, value} when is_boolean(value) ->
         value
       {:error, module} ->
@@ -72,7 +72,7 @@ defmodule ParallelEnum do
   end
 
   def count(collection) do
-    case ParallelEnumerable.count(collection) do
+    case Enumerable.Parallel.count(collection) do
       {:ok, value} when is_integer(value) ->
         value
       {:error, module} ->
@@ -84,7 +84,7 @@ defmodule ParallelEnum do
 
   def map(collection, fun) do
     combiner = fn x, {_, acc} -> {:cont,  x ++ acc} end
-    ParallelEnumerable.reduce(collection, {:cont, []}, R.map(fun), combiner, @default_partition_size)
+    Enumerable.Parallel.reduce(collection, {:cont, []}, R.map(fun), combiner, @default_partition_size)
       |> elem(1)
       |> :lists.reverse
   end

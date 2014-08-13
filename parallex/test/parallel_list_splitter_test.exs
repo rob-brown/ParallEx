@@ -2,19 +2,19 @@ defmodule ParallelListSplitterTest do
   use ExUnit.Case
 
   test "new" do
-    s0 = ParallelList.Splitter.new []
-    s1 = ParallelList.Splitter.new [1]
-    s2 = ParallelList.Splitter.new Enum.to_list(1..3)
+    s0 = List.Parallel.Splitter.new []
+    s1 = List.Parallel.Splitter.new [1]
+    s2 = List.Parallel.Splitter.new Enum.to_list(1..3)
 
-    assert s0 == %ParallelList.Splitter{list: [], range: 0..0}
-    assert s1 == %ParallelList.Splitter{list: [1], range: 0..0}
-    assert s2 == %ParallelList.Splitter{list: [ 1, 2, 3 ], range: 0..2}
+    assert s0 == %List.Parallel.Splitter{list: [], range: 0..0}
+    assert s1 == %List.Parallel.Splitter{list: [1], range: 0..0}
+    assert s2 == %List.Parallel.Splitter{list: [ 1, 2, 3 ], range: 0..2}
   end
 
   test "split" do
-    s0 = ParallelList.Splitter.new []
-    s1 = ParallelList.Splitter.new [1]
-    s2 = ParallelList.Splitter.new Enum.to_list(1..10)
+    s0 = List.Parallel.Splitter.new []
+    s1 = List.Parallel.Splitter.new [1]
+    s2 = List.Parallel.Splitter.new Enum.to_list(1..10)
 
     # Tests splitting splitters that can't split any more.
     assert [s0] == Splitter.split s0
@@ -22,16 +22,16 @@ defmodule ParallelListSplitterTest do
 
     # Tests splitting a regular splitter.
     [ splitter1, splitter2 ] = Splitter.split s2
-    assert splitter1 == %ParallelList.Splitter{list: [ 1, 2, 3, 4, 5 ], range: 0..4}
-    assert splitter2 == %ParallelList.Splitter{list: [ 6, 7, 8, 9, 10 ], range: 5..9}
+    assert splitter1 == %List.Parallel.Splitter{list: [ 1, 2, 3, 4, 5 ], range: 0..4}
+    assert splitter2 == %List.Parallel.Splitter{list: [ 6, 7, 8, 9, 10 ], range: 5..9}
 
     # Tests splitting split splitters.
     [ splitter3, splitter4 ] = Splitter.split splitter1
     [ splitter5, splitter6 ] = Splitter.split splitter2
-    assert splitter3 == %ParallelList.Splitter{list: [ 1, 2, 3 ], range: 0..2}
-    assert splitter4 == %ParallelList.Splitter{list: [ 4, 5 ], range: 3..4}
-    assert splitter5 == %ParallelList.Splitter{list: [ 6, 7, 8 ], range: 5..7}
-    assert splitter6 == %ParallelList.Splitter{list: [ 9, 10 ], range: 8..9}
+    assert splitter3 == %List.Parallel.Splitter{list: [ 1, 2, 3 ], range: 0..2}
+    assert splitter4 == %List.Parallel.Splitter{list: [ 4, 5 ], range: 3..4}
+    assert splitter5 == %List.Parallel.Splitter{list: [ 6, 7, 8 ], range: 5..7}
+    assert splitter6 == %List.Parallel.Splitter{list: [ 9, 10 ], range: 8..9}
   end
 
   test "reduce" do
@@ -54,19 +54,19 @@ defmodule ParallelListSplitterTest do
   end
 
   test "empty" do
-    assert ParallelList.Splitter.new == Collectable.empty(ParallelList.Splitter.new)
-    assert ParallelList.Splitter.new == Collectable.empty(ParallelList.Splitter.new [])
-    assert ParallelList.Splitter.new == Collectable.empty(ParallelList.Splitter.new [1, 2, 3])
+    assert List.Parallel.Splitter.new == Collectable.empty(List.Parallel.Splitter.new)
+    assert List.Parallel.Splitter.new == Collectable.empty(List.Parallel.Splitter.new [])
+    assert List.Parallel.Splitter.new == Collectable.empty(List.Parallel.Splitter.new [1, 2, 3])
   end
 
   test "into" do
-    assert ParallelList.Splitter.new([ 1, 2, 3 ]) == Enum.into([ 1, 2, 3 ], ParallelList.Splitter.new())
-    assert ParallelList.Splitter.new([ 1, 2, 3 ]) == Enum.into([], ParallelList.Splitter.new([ 1, 2, 3 ]))
-    assert ParallelList.Splitter.new([ 1, 2, 3, 4, 5, 6 ]) == Enum.into([ 4, 5, 6 ], ParallelList.Splitter.new([ 1, 2, 3 ]))
+    assert List.Parallel.Splitter.new([ 1, 2, 3 ]) == Enum.into([ 1, 2, 3 ], List.Parallel.Splitter.new())
+    assert List.Parallel.Splitter.new([ 1, 2, 3 ]) == Enum.into([], List.Parallel.Splitter.new([ 1, 2, 3 ]))
+    assert List.Parallel.Splitter.new([ 1, 2, 3, 4, 5, 6 ]) == Enum.into([ 4, 5, 6 ], List.Parallel.Splitter.new([ 1, 2, 3 ]))
   end
 
   defp compare_results(list, fun) do
-    compare_results(list, ParallelList.Splitter.new(list), fun)
+    compare_results(list, List.Parallel.Splitter.new(list), fun)
   end
   defp compare_results(list, splitter, fun) do
     assert fun.(list) == fun.(splitter)
