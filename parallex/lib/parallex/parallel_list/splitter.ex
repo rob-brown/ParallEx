@@ -4,7 +4,8 @@ defmodule ParallelList.Splitter do
   # ???: Is the range even necessary?
   defstruct list: [], range: 0..0
 
-  def new([] \\ []), do: %ParallelList.Splitter{}
+  def new(list \\ [])
+  def new([]), do: %ParallelList.Splitter{}
   def new(list) when is_list(list) do
     range = 0..(Enum.count(list) - 1)
     %ParallelList.Splitter{list: list, range: range}
@@ -45,7 +46,7 @@ defmodule ParallelList.Splitter do
     { :ok, Enum.count(splitter.list) }
   end
 
-  def into(%ParallelList.Splitter{list: orig_list, range: lo..hi}) do
+  def into(%ParallelList.Splitter{list: orig_list}) do
     { [], fn
       acc, {:cont, x} ->
         [ x | acc ]

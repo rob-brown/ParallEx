@@ -11,7 +11,6 @@ defmodule ParallelList do
 	end
 
 	def reduce(collection, acc, reducer, combiner, n) do
-	  # TODO: Reduce the collections.
 
 	  # ???: How do I need to handle the accumulator?
 
