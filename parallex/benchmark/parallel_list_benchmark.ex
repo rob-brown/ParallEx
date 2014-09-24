@@ -31,7 +31,7 @@ defmodule List.Parallel.Benchmark do
   defp run(fun, :parallel) do
     inputs
       |> Enum.map(&(List.Parallel.new &1))
-      |> Enum.map(fn x -> { x.count, time(fn -> ParallelEnum.map(x, fun) end) } end)
+      |> Enum.map(fn x -> { x.count, time(fn -> Enum.Parallel.map(x, fun) end) } end)
   end
 
   defp run(fun, :sequential) do

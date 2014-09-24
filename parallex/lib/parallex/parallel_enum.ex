@@ -11,7 +11,7 @@ defprotocol Enumerable.Parallel do
   def reduce(collection, acc, reducer, combiner, partitions);
 end
 
-defmodule ParallelEnum do
+defmodule Enum.Parallel do
 
   @default_partition_size 512
 
