@@ -1,5 +1,5 @@
 defmodule ParallexTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
 
   # test "the truth" do
   #   assert(true)

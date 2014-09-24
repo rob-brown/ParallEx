@@ -4,7 +4,7 @@ defmodule Parallex.Mixfile do
   def project do
     [ app: :parallex,
       version: "0.0.1",
-      elixir: "~> 0.15.0",
+      elixir: "~> 1.0.0",
       deps: deps ]
   end
 
@@ -21,6 +21,8 @@ defmodule Parallex.Mixfile do
   # { :barbat, "~> 0.1", github: "elixir-lang/barbat" }
   defp deps do
     [
+      { :exprof, [github: "parroty/exprof", tag: "v0.1.3"] },
+      { :exskel, [github: "rob-brown/ExSkel", tag: "0.0.1"] },
       # {:poolboy, "~> 1.1.0",[github: "devinus/poolboy", tag: "1.1.0"]}
     ]
   end

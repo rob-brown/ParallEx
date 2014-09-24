@@ -1,5 +1,5 @@
 defmodule ParallelListCombinerTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
 
   test "new" do
     assert %List.Parallel.Combiner{lists: []} == List.Parallel.Combiner.new()

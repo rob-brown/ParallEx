@@ -1,5 +1,5 @@
 defmodule ParallelListTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
 
   def default_test_lists do
     [

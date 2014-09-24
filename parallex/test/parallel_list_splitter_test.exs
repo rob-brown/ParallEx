@@ -1,5 +1,5 @@
 defmodule ParallelListSplitterTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
 
   test "new" do
     s0 = List.Parallel.Splitter.new []
@@ -51,12 +51,6 @@ defmodule ParallelListSplitterTest do
     compare_results Enum.to_list(1..1), &(Enum.member? &1, 5)
     compare_results Enum.to_list(1..10), &(Enum.member? &1, 5)
     compare_results Enum.to_list(1..10_000), &(Enum.member? &1, 7_777)
-  end
-
-  test "empty" do
-    assert List.Parallel.Splitter.new == Collectable.empty(List.Parallel.Splitter.new)
-    assert List.Parallel.Splitter.new == Collectable.empty(List.Parallel.Splitter.new [])
-    assert List.Parallel.Splitter.new == Collectable.empty(List.Parallel.Splitter.new [1, 2, 3])
   end
 
   test "into" do

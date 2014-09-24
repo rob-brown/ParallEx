@@ -7,19 +7,35 @@ defmodule List.Parallel do
 	end
 
 	def reduce(collection, acc, reducer, combiner, n) do
+		reduce_with_tasks(collection, acc, reducer, combiner, n)
+	end
 
-	  # ???: How do I need to handle the accumulator?
-
-		# ???: Should I change this to use tasks? What if I have problems with time outs?
-
-	  # For now, this runs each splitter on its own process.
-	  # This is not scalable and should be used with a process pool or similar technique.
-	  # It should also watch out for processes that die.
-	  # To properly do this, I should move this code into a different module.
-	  collection
-	    |> split(n)
+	def reduce_with_spawn(collection, acc, reducer, combiner, n) do
+		collection
+			|> split(n)
 			|> spawn_jobs(acc, reducer)
 			|> collect_responses(acc, combiner)
+	end
+
+	def reduce_with_tasks(collection, acc, reducer, combiner, n) do
+		{ :ok, sup } = Task.Supervisor.start_link()
+		map_job = &(fn -> Enumerable.reduce(&1, acc, reducer) end)
+		timeout = 1_000_000
+		collection
+			|> split(n)
+			|> Enum.map(&(Task.Supervisor.async(sup, map_job.(&1))))
+			|> Enum.reduce(acc, &(&1 |> Task.await(timeout) |> elem(1) |> combiner.(&2)))
+	end
+
+	def reduce_with_skel(collection, acc, reducer, combiner, n) do
+		worker_count = 2 * :erlang.system_info(:schedulers_online)
+		collection
+			|> split(n)
+			|> (&([&1])).()
+			|> ExSkel.sync([{ :map, [{ :seq, &(Enumerable.reduce(&1, acc, reducer) |> elem(1)) }], worker_count }])
+			|> ExSkel.sync([{ :reduce, &(Enum.reduce(&1, &2, combiner)), &(&1) }])
+			|> List.last
+			|> (&({ :done, &1 })).()
 	end
 
 	defp spawn_jobs(splitters, acc, fun) do
@@ -44,7 +60,8 @@ defmodule List.Parallel do
 	  _split [ splitter ], collection.count
 	end
 
-	@min_partition 1000
+	# TODO: Switch to a partition count with a pool.
+	@min_partition 100_000
 
 	# Splits the splitters until the partition size is under some threshold.
 	# This could also split into a multiple of the number of the schedulers.
