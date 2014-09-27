@@ -19,12 +19,13 @@ defmodule List.Parallel do
 
 	def reduce_with_tasks(collection, acc, reducer, combiner, n) do
 		{ :ok, sup } = Task.Supervisor.start_link()
+		timeout = :infinity
 		map_job = &(fn -> Enumerable.reduce(&1, acc, reducer) end)
-		timeout = 1_000_000
+		reduce_job = &(&1 |> Task.await(timeout) |> elem(1) |> combiner.(&2))
 		collection
 			|> split(n)
 			|> Enum.map(&(Task.Supervisor.async(sup, map_job.(&1))))
-			|> Enum.reduce(acc, &(&1 |> Task.await(timeout) |> elem(1) |> combiner.(&2)))
+			|> Enum.reduce(acc, reduce_job)
 	end
 
 	def reduce_with_skel(collection, acc, reducer, combiner, n) do
@@ -55,23 +56,19 @@ defmodule List.Parallel do
 			             end)
 	end
 
-	defp split(collection, _n) do
+	defp split(collection, n) do
 	  splitter = List.Parallel.Splitter.new(collection.list) # I should switch this to use the factory methods
-	  _split [ splitter ], collection.count
+	  _split [ splitter ], 0, 1, n
 	end
 
-	# TODO: Switch to a partition count with a pool.
-	@min_partition 100_000
-
-	# Splits the splitters until the partition size is under some threshold.
-	# This could also split into a multiple of the number of the schedulers.
-	# Only profiling will tell what works best.
-	defp _split(splitters, size) when size <= @min_partition, do: splitters
-	defp _split(splitters, size) do
-	  splitters
-	    |> Enum.reduce([], &split_reducer/2)
-	    |> Enum.reverse()
-	    |> _split(div(size, 2))
+	defp _split(splitters, prev_count, count, _n) when prev_count == count, do: splitters
+	defp _split(splitters, _prev_count, count, n) when count >= n, do: splitters
+	defp _split(splitters, _prev_count, count, n) do
+	  new_splitters = splitters
+	                    |> Enum.reduce([], &split_reducer/2)
+	                    |> Enum.reverse()
+		new_count = Enum.count(new_splitters)
+		_split new_splitters, count, new_count, n
 	end
 
 	defp split_reducer(splitter, acc) do

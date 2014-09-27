@@ -42,10 +42,12 @@ defmodule List.Parallel.Benchmark do
   def benchmark() do
     fun = &(&1 * &1)
     # fun = fn x -> :timer.sleep(1); x * x end
-    IO.inspect [
-                { :seq, run(fun, :sequential)},
+    results = [
+                { :seq, run(fun, :sequential) },
                 { :par, run(fun, :parallel) },
-                ]
+              ]
+    # System.cmd "say", ["All done"]  # A convenience for Mac OS X
+    IO.inspect results
   end
 
   def profile() do
