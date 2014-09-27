@@ -30,11 +30,13 @@ defmodule List.Parallel do
 
 	def reduce_with_skel(collection, acc, reducer, combiner, n) do
 		worker_count = 2 * :erlang.system_info(:schedulers_online)
+		map_job = &(Enumerable.reduce(&1, acc, reducer) |> elem(1))
+		reduce_job = &(Enum.reduce(&2, &1, combiner))
 		collection
 			|> split(n)
 			|> (&([&1])).()
-			|> ExSkel.sync([{ :map, [{ :seq, &(Enumerable.reduce(&1, acc, reducer) |> elem(1)) }], worker_count }])
-			|> ExSkel.sync([{ :reduce, &(Enum.reduce(&1, &2, combiner)), &(&1) }])
+			|> ExSkel.sync([{ :ord, [{ :map, [{ :seq, map_job }], worker_count }] }])
+			|> ExSkel.sync([{ :reduce, reduce_job, &(IO.inspect &1) }])
 			|> List.last
 			|> (&({ :done, &1 })).()
 	end

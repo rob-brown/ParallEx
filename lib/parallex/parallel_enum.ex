@@ -83,7 +83,7 @@ defmodule Enum.Parallel do
   end
 
   def map(collection, fun) do
-    combiner = fn x, {_, acc} -> {:cont,  x ++ acc} end
+    combiner = fn x, {_, acc} -> {:cont, x ++ acc} end
     Enumerable.Parallel.reduce(collection, {:cont, []}, R.map(fun), combiner, @default_partition_size)
       |> elem(1)
       |> :lists.reverse

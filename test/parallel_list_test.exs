@@ -14,7 +14,9 @@ defmodule ParallelListTest do
   end
 
   test "new from list" do
-    for l <- default_test_lists, do: assert List.Parallel.new(l) == %List.Parallel{list: l, count: Enum.count l}
+    for l <- default_test_lists do
+      assert List.Parallel.new(l) == %List.Parallel{list: l, count: Enum.count l}
+    end
   end
 
   test "map" do
@@ -50,6 +52,8 @@ defmodule ParallelListTest do
   end
 
   test "count" do
-    for l <- default_test_lists, do: assert Enum.count(l) == Enum.Parallel.count(List.Parallel.new l)
+    for l <- default_test_lists do
+      assert Enum.count(l) == Enum.Parallel.count(List.Parallel.new l)
+    end
   end
 end
