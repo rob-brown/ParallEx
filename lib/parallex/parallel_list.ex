@@ -6,34 +6,33 @@ defmodule List.Parallel do
 		%List.Parallel{list: list, count: Enum.count(list)}
 	end
 
-	def reduce(collection, acc, reducer, combiner, n) do
-		reduce_with_tasks(collection, acc, reducer, combiner, n)
+	def reduce(collection, acc, reducer, combiner, opts) do
+		reduce_with_tasks(collection, acc, reducer, combiner, opts)
 	end
 
-	def reduce_with_spawn(collection, acc, reducer, combiner, n) do
+	def reduce_with_spawn(collection, acc, reducer, combiner, opts) do
 		collection
-			|> split(n)
+			|> split(opts.partition_count)
 			|> spawn_jobs(acc, reducer)
 			|> collect_responses(acc, combiner)
 	end
 
-	def reduce_with_tasks(collection, acc, reducer, combiner, n) do
+	def reduce_with_tasks(collection, acc, reducer, combiner, opts) do
 		{ :ok, sup } = Task.Supervisor.start_link()
-		timeout = :infinity
 		map_job = &(fn -> Enumerable.reduce(&1, acc, reducer) end)
-		reduce_job = &(&1 |> Task.await(timeout) |> elem(1) |> combiner.(&2))
+		reduce_job = &(&1 |> Task.await(opts.timeout) |> elem(1) |> combiner.(&2))
 		collection
-			|> split(n)
+			|> split(opts.partition_count)
 			|> Enum.map(&(Task.Supervisor.async(sup, map_job.(&1))))
 			|> Enum.reduce(acc, reduce_job)
 	end
 
-	def reduce_with_skel(collection, acc, reducer, combiner, n) do
+	def reduce_with_skel(collection, acc, reducer, combiner, opts) do
 		worker_count = 2 * :erlang.system_info(:schedulers_online)
 		map_job = &(Enumerable.reduce(&1, acc, reducer) |> elem(1))
 		reduce_job = &(Enum.reduce(&2, &1, combiner))
 		collection
-			|> split(n)
+			|> split(opts.partition_count)
 			|> (&([&1])).()
 			|> ExSkel.sync([{ :ord, [{ :map, [{ :seq, map_job }], worker_count }] }])
 			|> ExSkel.sync([{ :reduce, reduce_job, &(IO.inspect &1) }])
@@ -95,9 +94,9 @@ end
 # end
 
 defimpl Enumerable.Parallel, for: List.Parallel do
-	def reduce(_,          { :halt, acc }, _reducer, _combiner, _n), do: { :halted, acc }
-	def reduce(collection, { :suspend, acc }, reducer, combiner, n), do: { :suspended, acc, &reduce(collection, &1, reducer, combiner, n) }
-	def reduce(collection, { :cont, acc }, reducer, combiner, n),    do: List.Parallel.reduce(collection, { :cont, acc }, reducer, combiner, n)
+	def reduce(_,          { :halt, acc }, _reducer, _combiner, _opts), do: { :halted, acc }
+	def reduce(collection, { :suspend, acc }, reducer, combiner, opts), do: { :suspended, acc, &reduce(collection, &1, reducer, combiner, opts) }
+	def reduce(collection, { :cont, acc }, reducer, combiner, opts),    do: List.Parallel.reduce(collection, { :cont, acc }, reducer, combiner, opts)
 
 	def member?(collection, value), do: { :ok, Enum.member?(collection.list, value) }  # { :error, __MODULE__ }
 	def count(collection),          do: { :ok, collection.count }

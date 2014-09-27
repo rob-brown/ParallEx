@@ -1,3 +1,14 @@
+defmodule Enum.Parallel.Opts do
+
+  defstruct partition_count: 512,
+            timeout: :infinity
+
+  @type t :: %__MODULE__{
+    partition_count: pos_integer,
+    timeout: pos_integer | :infinity
+  }
+end
+
 defprotocol Enumerable.Parallel do
 
   @type acc :: {:cont, term} | {:halt, term} | {:suspend, term}
@@ -8,12 +19,10 @@ defprotocol Enumerable.Parallel do
 
   def count(collection);
   def member?(collection, value);
-  def reduce(collection, acc, reducer, combiner, partitions);
+  def reduce(collection, acc, reducer, combiner, opts \\ %Enum.Parallel.Opts{});
 end
 
 defmodule Enum.Parallel do
-
-  @default_partition_size 512
 
   # Require Stream.Reducers and its callbacks
   require Stream.Reducers, as: R
@@ -32,23 +41,23 @@ defmodule Enum.Parallel do
     end
   end
 
-  # ???: Should I instead have an `options` list instead of partitions?
-  def reduce(collection, acc, fun, combiner \\ nil, partitions \\ @default_partition_size)
+  def reduce(collection, acc, fun, combiner \\ nil, opts \\ [])
 
-  def reduce(collection, acc, fun, _combiner, _partitions) when is_list(collection) do
+  def reduce(collection, acc, fun, _combiner, _opts) when is_list(collection) do
     :lists.foldl(fun, acc, collection)
   end
 
-  def reduce(collection, acc, reducer, nil, partitions) do
-    reduce(collection, acc, reducer, reducer, partitions)
+  def reduce(collection, acc, reducer, nil, opts) do
+    reduce collection, acc, reducer, reducer, opts
   end
 
-  def reduce(collection, acc, reducer, combiner, partitions) do
+  def reduce(collection, acc, reducer, combiner, opts) when is_list(opts) do
+    opts = struct(Enum.Parallel.Opts, opts)
     Enumerable.Parallel.reduce(collection,
                               {:cont, acc},
                               fn x, acc -> {:cont, reducer.(x, acc)} end,
                               fn x, {_, acc} -> {:cont, combiner.(x, acc)} end,
-                              partitions) |> elem(1)
+                              opts) |> elem(1)
   end
 
   def member?(collection, value) when is_list(collection) do
@@ -84,7 +93,7 @@ defmodule Enum.Parallel do
 
   def map(collection, fun) do
     combiner = fn x, {_, acc} -> {:cont, x ++ acc} end
-    Enumerable.Parallel.reduce(collection, {:cont, []}, R.map(fun), combiner, @default_partition_size)
+    Enumerable.Parallel.reduce(collection, {:cont, []}, R.map(fun), combiner)
       |> elem(1)
       |> :lists.reverse
   end
