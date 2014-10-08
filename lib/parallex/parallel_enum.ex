@@ -1,5 +1,7 @@
 defmodule Enum.Parallel.Opts do
 
+  # ???: Should I expose the reducing function in the options?
+
   defstruct partition_count: 512,
             timeout: :infinity
 
@@ -9,20 +11,21 @@ defmodule Enum.Parallel.Opts do
   }
 end
 
-defprotocol Enumerable.Parallel do
-
-  @type acc :: {:cont, term} | {:halt, term} | {:suspend, term}
-  @type reducer :: (term, term -> acc)
-  @type combiner :: (term, term -> acc)
-  @type continuation :: (acc -> result)
-  @type result :: {:done, term} | {:halted, term} | {:suspended, term, continuation}
-
-  def count(collection);
-  def member?(collection, value);
-  def reduce(collection, acc, reducer, combiner, opts \\ %Enum.Parallel.Opts{});
+defmodule Enum.Parallel.Reducer do
+  def reduce(collection, acc, reducer, combiner, opts \\ %Enum.Parallel.Opts{}) do
+    { :ok, sup } = Task.Supervisor.start_link()
+    map_job = &(fn -> Enumerable.reduce(&1, acc, reducer) end)
+    reduce_job = &(&1 |> Task.await(opts.timeout) |> elem(1) |> combiner.(&2))
+    collection
+      |> Splitter.split(opts)
+      |> Enum.map(&(Task.Supervisor.async(sup, map_job.(&1))))
+      |> Enum.reduce(acc, reduce_job)
+  end
 end
 
 defmodule Enum.Parallel do
+
+  alias Enum.Parallel.Reducer
 
   # Require Stream.Reducers and its callbacks
   require Stream.Reducers, as: R
@@ -53,11 +56,11 @@ defmodule Enum.Parallel do
 
   def reduce(collection, acc, reducer, combiner, opts) when is_list(opts) do
     opts = struct(Enum.Parallel.Opts, opts)
-    Enumerable.Parallel.reduce(collection,
-                              {:cont, acc},
-                              fn x, acc -> {:cont, reducer.(x, acc)} end,
-                              fn x, {_, acc} -> {:cont, combiner.(x, acc)} end,
-                              opts) |> elem(1)
+    Reducer.reduce(collection,
+                  {:cont, acc},
+                  fn x, acc -> {:cont, reducer.(x, acc)} end,
+                  fn x, {_, acc} -> {:cont, combiner.(x, acc)} end,
+                  opts) |> elem(1)
   end
 
   def member?(collection, value) when is_list(collection) do
@@ -65,15 +68,10 @@ defmodule Enum.Parallel do
   end
 
   def member?(collection, value) do
-    case Enumerable.Parallel.member?(collection, value) do
-      {:ok, value} when is_boolean(value) ->
-        value
-      {:error, module} ->
-        module.reduce(collection, {:cont, false}, fn
-          v, _ when v === value -> {:halt, true}
-          _, _                  -> {:cont, false}
-        end) |> elem(1)
-    end
+    Reducer.reduce(collection, {:cont, false}, fn
+                    v, _ when v === value -> {:halt, true}
+                    _, _                  -> {:cont, false}
+                  end) |> elem(1)
   end
 
   def count(collection) when is_list(collection) do
@@ -81,19 +79,14 @@ defmodule Enum.Parallel do
   end
 
   def count(collection) do
-    case Enumerable.Parallel.count(collection) do
-      {:ok, value} when is_integer(value) ->
-        value
-      {:error, module} ->
-        module.reduce(collection, {:cont, 0}, fn
-          _, acc -> {:cont, acc + 1}
-        end) |> elem(1)
-    end
+    Reducer.reduce(collection, {:cont, 0}, fn
+                    _, acc -> {:cont, acc + 1}
+                  end) |> elem(1)
   end
 
   def map(collection, fun) do
     combiner = fn x, {_, acc} -> {:cont, x ++ acc} end
-    Enumerable.Parallel.reduce(collection, {:cont, []}, R.map(fun), combiner)
+    Reducer.reduce(collection, {:cont, []}, R.map(fun), combiner)
       |> elem(1)
       |> :lists.reverse
   end

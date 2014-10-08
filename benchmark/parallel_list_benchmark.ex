@@ -29,19 +29,19 @@ defmodule List.Parallel.Benchmark do
   end
 
   defp run(fun, :parallel) do
-    inputs
-      |> Enum.map(&(List.Parallel.new &1))
-      |> Enum.map(fn x -> { x.count, time(fn -> Enum.Parallel.map(x, fun) end) } end)
+    Enum.map(inputs, fn x -> { length(x), time(fn -> Enum.Parallel.map(x, fun) end) } end)
   end
 
   defp run(fun, :sequential) do
-    inputs
-      |> Enum.map(fn x -> { length(x), time(fn -> Enum.map(x, fun) end) } end)
+    Enum.map(inputs, fn x -> { length(x), time(fn -> Enum.map(x, fun) end) } end)
   end
 
+  # defp fib(n), do: Stream.unfold({0, 1}, fn {a, b} -> {a, {b, a + b}} end) |> Enum.at(n)
+
   def benchmark() do
-    fun = &(&1 * &1)
-    # fun = fn x -> :timer.sleep(1); x * x end
+    # fun = &(&1 * &1)
+    fun = fn x -> :timer.sleep(1); x * x end
+    # fun = &fib/1
     results = [
                 { :seq, run(fun, :sequential) },
                 { :par, run(fun, :parallel) },
