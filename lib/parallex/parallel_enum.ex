@@ -1,6 +1,7 @@
 defmodule Enum.Parallel.Opts do
 
   # ???: Should I expose the reducing function in the options?
+  # ???: Should I have an ordered option since sets have no inherent order?
 
   defstruct partition_count: 512,
             timeout: :infinity
@@ -12,7 +13,19 @@ defmodule Enum.Parallel.Opts do
 end
 
 defmodule Enum.Parallel.Reducer do
-  def reduce(collection, acc, reducer, combiner, opts \\ %Enum.Parallel.Opts{}) do
+
+  def reduce(collection, acc, reducer, combiner \\ nil, opts \\ %Enum.Parallel.Opts{})
+
+  def reduce(collection, acc, reducer, nil, opts) do
+    reduce(collection, acc, reducer, reducer, opts)
+  end
+
+  def reduce(collection, acc, reducer, combiner, opts) when is_list(opts) do
+    struct_opts = struct(Enum.Parallel.Opts, opts)
+    reduce(collection, acc, reducer, combiner, struct_opts)
+  end
+
+  def reduce(collection, acc, reducer, combiner, opts) do
     { :ok, sup } = Task.Supervisor.start_link()
     map_job = &(fn -> Enumerable.reduce(&1, acc, reducer) end)
     reduce_job = &(&1 |> Task.await(opts.timeout) |> elem(1) |> combiner.(&2))
@@ -46,16 +59,11 @@ defmodule Enum.Parallel do
 
   def reduce(collection, acc, fun, combiner \\ nil, opts \\ [])
 
-  def reduce(collection, acc, fun, _combiner, _opts) when is_list(collection) do
-    :lists.foldl(fun, acc, collection)
-  end
-
   def reduce(collection, acc, reducer, nil, opts) do
     reduce collection, acc, reducer, reducer, opts
   end
 
-  def reduce(collection, acc, reducer, combiner, opts) when is_list(opts) do
-    opts = struct(Enum.Parallel.Opts, opts)
+  def reduce(collection, acc, reducer, combiner, opts) do
     Reducer.reduce(collection,
                   {:cont, acc},
                   fn x, acc -> {:cont, reducer.(x, acc)} end,
@@ -63,27 +71,22 @@ defmodule Enum.Parallel do
                   opts) |> elem(1)
   end
 
-  def member?(collection, value) when is_list(collection) do
-    :lists.member(value, collection)
-  end
-
   def member?(collection, value) do
     Reducer.reduce(collection, {:cont, false}, fn
                     v, _ when v === value -> {:halt, true}
                     _, _                  -> {:cont, false}
-                  end) |> elem(1)
-  end
-
-  def count(collection) when is_list(collection) do
-    :erlang.length(collection)
+                  end,
+                  fn x, {_, acc} -> {:cont, x or acc} end) |> elem(1)
   end
 
   def count(collection) do
-    Reducer.reduce(collection, {:cont, 0}, fn
-                    _, acc -> {:cont, acc + 1}
-                  end) |> elem(1)
+    Reducer.reduce(collection,
+                  {:cont, 0},
+                  fn _, acc -> {:cont, acc + 1} end,
+                  fn x, { _, acc } -> {:cont, x + acc} end) |> elem(1)
   end
 
+  # ???: Should I expose the options on other functions?
   def map(collection, fun) do
     combiner = fn x, {_, acc} -> {:cont, x ++ acc} end
     Reducer.reduce(collection, {:cont, []}, R.map(fun), combiner)
