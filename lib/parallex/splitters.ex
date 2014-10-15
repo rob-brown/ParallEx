@@ -14,6 +14,21 @@ defimpl Splittable, for: List do
   end
 end
 
+defimpl Splittable, for: Range do
+
+  defp normalize(lo..hi) when lo <= hi, do: lo..hi
+  defp normalize(hi..lo), do: lo..hi
+
+  def split(lo..hi) when lo <= hi do
+    mid = div(hi - lo, 2) + lo
+    [ lo..mid, (mid + 1)..hi ]
+  end
+  def split(hi..lo) when lo <= hi do
+    mid = div(hi - lo, 2) + lo
+    [ hi..(mid + 1), mid..lo ]
+  end
+end
+
 defimpl Splittable, for: HashDict do  # Can I just use Dict?
 
   def split(dict) do

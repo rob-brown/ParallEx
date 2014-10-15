@@ -19,6 +19,31 @@ defmodule ListSplitterTest do
   end
 end
 
+defmodule RangeSplitterTest do
+  use ExUnit.Case, async: true
+
+  test "split single-item range" do
+    assert Splittable.split([1..1]) == [[1..1]]
+  end
+
+  test "split even-numbered, many-item range" do
+    assert Splittable.split(1..10) == [1..5, 6..10]
+  end
+
+  test "split odd-numbered, many-item range" do
+    [range1, range2] = Splittable.split(0..10_000)
+    assert abs(Enum.count(range1) - Enum.count(range2)) == 1
+  end
+
+  test "split backward range" do
+    assert Splittable.split(9..0) == [9..5, 4..0]
+  end
+
+  test "split negative range" do
+    assert Splittable.split(-2..3) == [-2..0, 1..3]
+  end
+end
+
 defmodule HashSetSplitterTest do
   use ExUnit.Case, async: true
 
