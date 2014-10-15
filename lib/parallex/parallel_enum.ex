@@ -79,18 +79,23 @@ defmodule Enum.Parallel do
                   fn x, {_, acc} -> {:cont, x or acc} end) |> elem(1)
   end
 
-  def count(collection) do
-    Reducer.reduce(collection,
-                  {:cont, 0},
-                  fn _, acc -> {:cont, acc + 1} end,
-                  fn x, { _, acc } -> {:cont, x + acc} end) |> elem(1)
+  def count(collection, opts \\ []) do
+    reducer = fn _, acc -> acc + 1 end
+    combiner = fn x, acc -> x + acc end
+    reduce(collection, 0, reducer, combiner, opts)
   end
 
-  # ???: Should I expose the options on other functions?
-  def map(collection, fun) do
+  def map(collection, fun, opts \\ []) do
     combiner = fn x, {_, acc} -> {:cont, x ++ acc} end
-    Reducer.reduce(collection, {:cont, []}, R.map(fun), combiner)
+    Reducer.reduce(collection, {:cont, []}, R.map(fun), combiner, opts)
       |> elem(1)
       |> :lists.reverse
+  end
+
+  def each(collection, fun, opts \\ []) do
+    reducer = fn x, _ -> fun.(x); nil end
+    combiner = fn _, _ -> nil end
+    reduce(collection, nil, reducer, combiner, opts)
+    :ok
   end
 end
