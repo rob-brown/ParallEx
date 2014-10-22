@@ -47,4 +47,11 @@ defmodule ParallelListTest do
       assert Enum.count(l) == Enum.Parallel.count(l)
     end
   end
+
+  test "filter", %{lists: lists} do
+    criteria = &(&1 < 5)
+    for l <- lists do
+      assert Enum.filter(l, criteria) == Enum.Parallel.filter(l, criteria)
+    end
+  end
 end

@@ -98,4 +98,11 @@ defmodule Enum.Parallel do
     reduce(collection, nil, reducer, combiner, opts)
     :ok
   end
+
+  def filter(collection, fun, opts \\ []) do
+    combiner = fn x, {_, acc} -> {:cont, x ++ acc} end
+    Reducer.reduce(collection, {:cont, []}, R.filter(fun), combiner, opts)
+      |> elem(1)
+      |> :lists.reverse
+  end
 end
